@@ -1,142 +1,49 @@
 /*
-  An npm JavaScript library for front end web apps. Implements a minimal
-  Bitcoin Cash wallet.
+  An npm JavaScript library for retriving donation addresses for donations.
 */
-
-/* eslint-disable no-async-promise-executor */
 
 'use strict'
 
-const BCHJS = require('@chris.troutner/bch-js')
-const crypto = require('crypto-js')
-
-const SendBCH = require('./lib/send-bch')
-
-let _this
-
-class MinimalBCHWallet {
-  constructor (hdPrivateKeyOrMnemonic, advancedOptions) {
-    this.advancedOptions = advancedOptions || {}
-
-    this.hdPath = this.advancedOptions.hdPath || "m/44'/245'/0'/0/0"
-
-    // Encapsulae the external libraries.
-    this.BCHJS = BCHJS
-    this.bchjs = new BCHJS()
-    this.crypto = crypto
-    this.sendBch = new SendBCH()
-
-    _this = this
-
-    // The create() function returns a promise. When it resolves, the
-    // walletInfoCreated flag will be set to true. The instance will also
-    // have a new walletInfo property that will contain the wallet information.
-    this.walletInfoCreated = false
-    this.walletInfoPromise = this.create(hdPrivateKeyOrMnemonic)
-  }
-
-  // Create a new wallet. Returns a promise that resolves into a wallet object.
-  async create (mnemonic) {
-    // return new Promise(async (resolve, reject) => {
-    try {
-      // Attempt to decrypt mnemonic if password is provided.
-      if (mnemonic && this.advancedOptions.password) {
-        mnemonic = this.decrypt(mnemonic, this.advancedOptions.password)
-      }
-
-      // Generate the HD wallet.
-      mnemonic = mnemonic || _this.bchjs.Mnemonic.generate(128)
-      const rootSeedBuffer = await _this.bchjs.Mnemonic.toSeed(mnemonic)
-      const masterHDNode = _this.bchjs.HDNode.fromSeed(rootSeedBuffer)
-      const childNode = masterHDNode.derivePath(this.hdPath)
-      const privateKey = _this.bchjs.HDNode.toWIF(childNode)
-
-      const walletInfo = {}
-
-      // Encrypt the mnemonic if a password is provided.
-      if (this.advancedOptions.password) {
-        walletInfo.mnemonicEncrypted = this.encrypt(
-          mnemonic,
-          this.advancedOptions.password
-        )
-      }
-
-      // Set the wallet properties.
-      walletInfo.mnemonic = mnemonic
-      walletInfo.privateKey = privateKey
-      walletInfo.address = walletInfo.cashAddress = _this.bchjs.HDNode.toCashAddress(
-        childNode
-      )
-      walletInfo.slpAddress = _this.bchjs.SLP.Address.toSLPAddress(
-        walletInfo.address
-      )
-      walletInfo.legacyAddress = _this.bchjs.HDNode.toLegacyAddress(childNode)
-      walletInfo.hdPath = _this.hdPath
-
-      // return resolve(walletInfo)
-      // return walletInfo
-
-      _this.walletInfoCreated = true
-      _this.walletInfo = walletInfo
-    } catch (err) {
-      // return reject(err)
-      console.error('Error in create()')
-      throw err
+// All the organizations available in this library are listed here.
+// Please submit a Pull Request (PR) on GitHub if you'd like your organization
+// added to the list:
+// https://github.com/Permissionless-Software-Foundation/bch-donation
+const orgs = [
+  {
+    // Permissionless Software Foundation
+    org: 'psf',
+    description: 'Permissionless Software Foundation',
+    website: 'https://psfoundation.cash',
+    addresses: {
+      // For donations. Will burn PSF tokens when BCH is sent to this address.
+      donations: 'bitcoincash:qqsrke9lh257tqen99dkyy2emh4uty0vky9y0z0lsr'
     }
-    // })
-  }
-
-  // Encrypt the mnemonic of the wallet.
-  encrypt (mnemonic, password) {
-    return this.crypto.AES.encrypt(mnemonic, password).toString()
-  }
-
-  // Decrypte the mnemonic of the wallet.
-  decrypt (mnemonicEncrypted, password) {
-    let mnemonic
-
-    try {
-      mnemonic = this.crypto.AES.decrypt(mnemonicEncrypted, password).toString(
-        this.crypto.enc.Utf8
-      )
-    } catch (err) {
-      throw new Error('Wrong password')
-    }
-
-    return mnemonic
-  }
-
-  // Get the balance of the wallet.
-  async getBalance (bchAddress) {
-    const addr = bchAddress || this.walletInfo.cashAddress
-    const balances = await this.bchjs.Electrumx.balance(addr)
-
-    return balances.balance.confirmed + balances.balance.unconfirmed
-  }
-
-  // Get transactions associated with the wallet.
-  async getTransactions (bchAddress) {
-    const addr = bchAddress || this.walletInfo.cashAddress
-    const data = await this.bchjs.Electrumx.transactions(addr)
-
-    const transactions = data.transactions.map(x => x.tx_hash)
-    return transactions
-  }
-
-  // Send BCH. Returns a promise that resolves into a TXID.
-  // This is a wrapper for the send-bch.js library.
-  send (outputs) {
-    try {
-      return _this.sendBch.sendBch(outputs, {
-        mnemonic: _this.walletInfo.mnemonic,
-        cashAddress: _this.walletInfo.address,
-        hdPath: _this.walletInfo.hdPath
-      })
-    } catch (err) {
-      console.error('Error in send()')
-      throw err
+  },
+  {
+    org: 'abc',
+    description: 'Bitcoin ABC',
+    website: 'https://www.bitcoinabc.org/',
+    addresses: {
+      donations: 'bitcoincash:qqeht8vnwag20yv8dvtcrd4ujx09fwxwsqqqw93w88'
     }
   }
+]
+
+// Retrieve the addresses array from the matching organization.
+function getAddress (org) {
+  // Match the input string to an organization in the list.
+  const matches = orgs.filter(item => item.org === org)
+
+  // Throw an error if no matching entries are found.
+  if (!matches) {
+    throw new Error('Could not find an organization with that handle.')
+  }
+
+  // Throw an error if more than one match is found.
+  if (matches.length > 1) throw new Error('Multiple organizations were found!')
+
+  // Return the match.
+  return matches[0].addresses
 }
 
-module.exports = MinimalBCHWallet
+module.exports = getAddress
