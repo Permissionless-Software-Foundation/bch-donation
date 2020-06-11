@@ -26,6 +26,14 @@ const orgs = [
     addresses: {
       donations: 'bitcoincash:qqeht8vnwag20yv8dvtcrd4ujx09fwxwsqqqw93w88'
     }
+  },
+  {
+    org: 'bchd',
+    description: 'BCHD full node in Go',
+    website: 'https://bchd.cash/',
+    addresses: {
+      donations: 'bitcoincash:qrhea03074073ff3zv9whh0nggxc7k03ssh8jv9mkx'
+    }
   }
 ]
 
