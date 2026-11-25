@@ -39,6 +39,13 @@
         "path": "@semantic-release/npm",
         "npmPublish": true
       }
+    ],
+    "releaseRules": [
+      {
+        "type": "chore",
+        "scope": "deps",
+        "release": "patch"
+      }
     ]
   }
 }
