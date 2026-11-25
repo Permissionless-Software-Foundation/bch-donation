@@ -1,0 +1,27 @@
+name: Release
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: https://registry.npmjs.org
+      # Install dev deps (semantic-release + plugins) from the lockfile.
+      - run: npm ci
+      # Analyze commits since the last release tag, bump the version in
+      # package.json, publish to npm, and tag the release commit on GitHub.
+      # Requires the NPM_TOKEN secret (see repo SETTINGS -> Secrets).
+      - run: npx semantic-release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
